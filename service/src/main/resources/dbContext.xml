@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="
+          http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans.xsd
+          http://www.springframework.org/schema/context
+          http://www.springframework.org/schema/context/spring-context.xsd
+          http://www.springframework.org/schema/tx
+          http://www.springframework.org/schema/tx/spring-tx.xsd
+          http://www.springframework.org/schema/data/jpa
+          http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!-- DataSource Proxy -->
+    <bean id="dataSourceProxy"
+          class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+        <constructor-arg ref="dataSource" />
+    </bean>
+
+    <!-- Hibernate Session Factory -->
+    <bean id="sessionFactory"
+          class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+        <property name="namingStrategy">
+            <bean class="org.hibernate.cfg.ImprovedNamingStrategy" />
+        </property>
+        <property name="dataSource" ref="dataSourceProxy" />
+        <property name="hibernateProperties" ref="hibernateProperties" />
+        <property name="packagesToScan" value="featuretoggle" />
+    </bean>
+
+    <!-- Repositories -->
+    <jpa:repositories base-package="featuretoggle.repositories" />
+
+    <beans profile="H2">
+        <!-- JPA Vendor -->
+        <bean id="jpaVendorAdapter"
+              class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+            <property name="database" value="H2" />
+            <property name="showSql" value="true" />
+        </bean>
+
+        <!-- Datasource -->
+        <bean id="dataSource"
+              class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+            <property name="driverClassName" value="org.h2.Driver" />
+            <property name="url" value="jdbc:h2:file:/tmp/ftlocal1;AUTO_SERVER=TRUE" />
+            <property name="username" value="sa" />
+            <property name="password" value="" />
+        </bean>
+
+        <bean id="flyway" class="com.googlecode.flyway.core.Flyway"
+              init-method="migrate">
+            <property name="dataSource" ref="dataSourceProxy" />
+            <property name="locations" value="/db/schema/h2/" />
+        </bean>
+
+        <!-- Session Factory -->
+        <bean id="hibernateProperties"
+              class="org.springframework.beans.factory.config.PropertiesFactoryBean"
+              depends-on="flyway">
+            <property name="properties">
+                <props>
+                    <prop key="hibernate.dialect">org.hibernate.dialect.H2Dialect</prop>
+                    <prop key="hibernate.connection.charSet">UTF-8</prop>
+                    <prop key="hibernate.hbm2ddl.auto">validate</prop>
+                    <prop key="hibernate.show_sql">true</prop>
+
+                    <!-- Disable cache -->
+                    <prop key="hibernate.cache.use_query_cache">false</prop>
+                    <prop key="hibernate.cache.use_second_level_cache">false</prop>
+                    <prop key="hibernate.cache.use_structured_entries">false</prop>
+                    <prop key="hibernate.cache.generate_statistics">false</prop>
+                </props>
+            </property>
+        </bean>
+
+   </beans>
+
+</beans>
